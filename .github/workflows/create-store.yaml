@@ -1,0 +1,43 @@
+# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+on:
+  workflow_dispatch:
+
+name: Create Store
+
+permissions: read-all
+
+jobs:
+  store:
+    runs-on: macos-latest
+    name: Create Store
+    
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - name: Create Store
+        run: |
+          Rscript scripts/make-store.R
+      
+      - name: Upload store db
+        run: |
+          COMMIT_HASH=$(git -C ~/github/quarto-dev/quarto-web rev-parse --short HEAD)
+          echo "${COMMIT_HASH}" > LATEST 
+          gh release upload store "inst/quarto.ragnar.store#quarto.ragnar.store-${COMMIT_HASH}" LATEST --clobber
+
