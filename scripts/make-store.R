@@ -98,9 +98,3 @@ for (r in seq_len(nrow(sitemap))) {
 }
 
 ragnar_store_build_index(store)
-
-
-store <- ragnar::ragnar_store_connect("~/Downloads/quarto.ragnar-2.store")
-store
-duckdb::dbListTables(store@.con)
-DBI::dbGetQuery(store@.con, "SELECT count(*) FROM chunks")
