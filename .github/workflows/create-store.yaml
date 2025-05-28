@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   store:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     name: Create Store
     
     env:
