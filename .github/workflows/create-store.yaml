@@ -34,6 +34,10 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.4.515
+
       - name: Create Store
         run: |
           Rscript scripts/make-store.R
