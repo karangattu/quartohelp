@@ -40,8 +40,10 @@ sitemap <- xml2::read_xml("~/github/quarto-dev/quarto-web/_site/sitemap.xml") |>
 # sanity check
 stopifnot(file.exists(sitemap$path))
 
-
 store_location <- "inst/quarto.ragnar.store"
+try({
+  fs::file_delete(store_location)
+})
 
 store <- ragnar_store_create(
   store_location,
@@ -96,3 +98,9 @@ for (r in seq_len(nrow(sitemap))) {
 }
 
 ragnar_store_build_index(store)
+
+
+store <- ragnar::ragnar_store_connect("~/Downloads/quarto.ragnar-2.store")
+store
+duckdb::dbListTables(store@.con)
+DBI::dbGetQuery(store@.con, "SELECT count(*) FROM chunks")
