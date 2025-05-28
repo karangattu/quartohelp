@@ -39,6 +39,8 @@ jobs:
           version: 1.7.31
 
       - name: Create Store
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           Rscript scripts/make-store.R
       
