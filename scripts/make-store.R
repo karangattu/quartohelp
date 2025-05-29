@@ -40,10 +40,7 @@ sitemap <- xml2::read_xml("~/github/quarto-dev/quarto-web/_site/sitemap.xml") |>
 # sanity check
 stopifnot(file.exists(sitemap$path))
 
-store_location <- "inst/quarto.ragnar.store"
-try({
-  fs::file_delete(store_location)
-})
+store_location <- "quarto.ragnar.store"
 
 store <- ragnar_store_create(
   store_location,

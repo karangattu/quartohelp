@@ -51,5 +51,5 @@ jobs:
         run: |
           COMMIT_HASH=$(git -C ~/github/quarto-dev/quarto-web rev-parse --short HEAD)
           echo "${COMMIT_HASH}" > LATEST 
-          gh release upload store "inst/quarto.ragnar.store#quarto.ragnar.store-${COMMIT_HASH}" LATEST --clobber
+          gh release upload store "quarto.ragnar.store#quarto.ragnar.store-${COMMIT_HASH}" LATEST --clobber
 
