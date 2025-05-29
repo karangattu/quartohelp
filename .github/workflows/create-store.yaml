@@ -2,9 +2,6 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - manage-store
 
 name: Create Store
 
