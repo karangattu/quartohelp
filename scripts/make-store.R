@@ -94,7 +94,7 @@ for (r in seq_len(nrow(sitemap))) {
   message(sprintf(
     "[%i/%i] inserting %i chunks for: %s",
     r, nrow(sitemap), nrow(chunks), url
-  )
+  ))
 
   ragnar_store_insert(store, chunks)
 }
