@@ -98,3 +98,5 @@ for (r in seq_len(nrow(sitemap))) {
 }
 
 ragnar_store_build_index(store)
+DBI::dbDisconnect(store@.con)
+
