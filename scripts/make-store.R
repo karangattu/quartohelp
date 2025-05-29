@@ -20,6 +20,8 @@ if (!dir.exists("~/github/quarto-dev/quarto-web/_site/")) {
   })
 }
 
+message(paste0("Pandoc from: ", pandoc::pandoc_bin()))
+message(paste0("Pandoc version: ", pandoc::pandoc_version()))
 
 sitemap <- xml2::read_xml("~/github/quarto-dev/quarto-web/_site/sitemap.xml") |>
   xml2::as_list() |>
