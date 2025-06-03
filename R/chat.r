@@ -97,15 +97,13 @@ quartohelp_chat_server <- function(
   client,
   store,
   question = NULL,
+  close_action = c("stop", "clear"),
   ...
 ) {
   store <- quarto_ragnar_store()
+  close_action <- match.arg(close_action)
 
   function(input, output, session) {
-    if (!is.null(question)) {
-      stream <- quartohelp_complete(client, store, question)
-      shinychat::chat_append("chat", stream)
-    }
 
     complete_task <- shiny::ExtendedTask$new(function(client, store, question) {
       value <- quartohelp_complete(client, store, question)
@@ -117,12 +115,27 @@ quartohelp_chat_server <- function(
       )
     })
 
+    if (!is.null(question)) {
+      complete_task$invoke(client, store, question)
+    }
+
     shiny::observeEvent(input$chat_user_input, {
       complete_task$invoke(client, store, input$chat_user_input)
     })
 
     shiny::observeEvent(input$close_btn, {
-      shiny::stopApp()
+      if (close_action == "stop") {
+        shiny::stopApp()
+      } else if (close_action == "clear") {
+        # Do not allow clearing while task is executing.
+        while(complete_task$status() == "running") {
+          Sys.sleep(0.5)
+        }
+
+        # clear the front-end and backend.
+        client$set_turns(list())
+        shinychat::chat_clear("chat")
+      }
     })
 
     shiny::observeEvent(complete_task$status(), {
