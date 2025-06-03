@@ -141,37 +141,49 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
   # also don't do it for follow up questions
   if (nchar(question) < 500 && length(client$get_turns()) < 2) {
     # temporary chat for making the tool call.
-    chat <- ellmer::chat_openai("gpt-4.1") |>
+    chat <- ellmer::chat_openai("gpt-4.1-nano") |>
       quartohelp_setup_client(store)
 
-    result <- chat$chat(
+    queries <- read.table(col.names = "query", text = chat$chat(
       echo = FALSE,
       glue::trim(glue::glue(
         "
-      Retrieve documents from the Quarto store related to the following question:
-      Then say 'Done' and nothing more. Ask a clarifying question if you are not
-      sure what to search for.
+        You are going to search on the Quarto Knowledge store. First generate up to
+        3 search queries related to the question below. You don't always need to
+        generate 3 queries. Be wise. Separate them by new lines and
+        make sure they are quoted, and if necessary inner contents should be escaped.
 
-      {question}
-    "
+        {question}
+        "
       ))
+    ))$query
+
+    # using a fixed retrieve tool for all requests already avoids repeated
+    # documents to appear in the output.
+    retrieve_tool <- quartohelp_retrieve_tool(store)
+    tool_requests <- lapply(queries, function(query) {
+      ellmer::ContentToolRequest(
+        id = rlang::hash(query),
+        name = "rag_retrieve_quarto_excerpts",
+        arguments = list(text = query),
+        # we're faking the request so we don't care about the function
+        tool = retrieve_tool
+      )
+    })
+
+    client$add_turn(
+      ellmer::Turn("user", contents = list(ellmer::ContentText(question))),
+      ellmer::Turn("assistant", contents = tool_requests)
     )
 
-    if (result == "Done") {
-      # now get the turns and inject them into the chat client that's currently being used.
-      turns <- chat$get_turns()
+    question <-lapply(tool_requests, function(req) {
+      asNamespace("ellmer")$invoke_tool(req)
+    })
 
-      client$add_turn(
-        ellmer::Turn("user", contents = list(ellmer::ContentText(question))),
-        turns[[2]]
-      )
-
-      question <- turns[[3]]@contents[[1]]
-    }
   }
 
   if (async) {
-    client$stream_async(question)
+    client$stream_async(!!!question)
   } else {
     client$chat(question)
   }
@@ -203,6 +215,14 @@ quartohelp_setup_client <- function(client, store) {
     "
   ))
 
+  retrieve_tool <- quartohelp_retrieve_tool(store)
+
+  client$register_tool(retrieve_tool)
+  client
+}
+
+
+quartohelp_retrieve_tool <- function(store) {
   retrieved_ids <- integer()
   rag_retrieve_quarto_excerpts <- function(text) {
     # Retrieve relevant chunks using hybrid (vector/BM25) search,
@@ -222,7 +242,7 @@ quartohelp_setup_client <- function(client, store) {
     )
   }
 
-  retrieve_tool <- ellmer::tool(
+  ellmer::tool(
     rag_retrieve_quarto_excerpts,
     glue::trim(
       "
@@ -235,7 +255,4 @@ quartohelp_setup_client <- function(client, store) {
     ),
     text = ellmer::type_string()
   )
-
-  client$register_tool(retrieve_tool)
-  client
 }
