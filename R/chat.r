@@ -144,19 +144,22 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
     chat <- ellmer::chat_openai("gpt-4.1-nano") |>
       quartohelp_setup_client(store)
 
-    queries <- read.table(col.names = "query", text = chat$chat(
+    queries <- chat$chat_structured(
       echo = FALSE,
+      type = ellmer::type_array(
+        "queries",
+        items = ellmer::type_string("a query. escaped if needed")
+      ),
       glue::trim(glue::glue(
         "
         You are going to search on the Quarto Knowledge store. First generate up to
         3 search queries related to the question below. You don't always need to
-        generate 3 queries. Be wise. Separate them by new lines and
-        make sure they are quoted, and if necessary inner contents should be escaped.
+        generate 3 queries. Be wise.
 
         {question}
         "
       ))
-    ))$query
+    )
 
     # using a fixed retrieve tool for all requests already avoids repeated
     # documents to appear in the output.
@@ -177,15 +180,20 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
     )
 
     question <-lapply(tool_requests, function(req) {
-      asNamespace("ellmer")$invoke_tool(req)
+      ellmer::ContentToolResult(
+        request = req,
+        value = req@tool@fun(req@arguments$text)
+      )
     })
-
+  } else {
+    # we need it to be a list for later
+    question <- list(question)
   }
 
   if (async) {
     client$stream_async(!!!question)
   } else {
-    client$chat(question)
+    client$chat(!!!question)
   }
 }
 
