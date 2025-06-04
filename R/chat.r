@@ -47,6 +47,7 @@ ask <- function(
   }
 
   store <- quarto_ragnar_store()
+  client <- quartohelp_setup_client(client, store)
 
   if (!interactive) {
     if (is.null(client)) {
@@ -176,7 +177,7 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
 
     # using a fixed retrieve tool for all requests already avoids repeated
     # documents to appear in the output.
-    retrieve_tool <- quartohelp_retrieve_tool(store)
+    retrieve_tool <- client$get_tools()$rag_retrieve_quarto_excerpts
     tool_requests <- lapply(queries, function(query) {
       ellmer::ContentToolRequest(
         id = rlang::hash(query),
