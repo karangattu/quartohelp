@@ -58,7 +58,7 @@ ask <- function(
   }
 
   ui <- quartohelp_chat_ui(question)
-  server <- quartohelp_chat_server(client, store, question)
+  server <- quartohelp_chat_server(store, client, question)
 
   tryCatch(shiny::runGadget(ui, server), interrupt = function(cnd) NULL)
   invisible(client)
@@ -95,8 +95,8 @@ quartohelp_chat_ui <- function(question) {
 #' Shiny Server for QuartoHelp Chat (with Initial Stream)
 #' @noRd
 quartohelp_chat_server <- function(
-  client,
   store,
+  client = ellmer::chat_openai(model = "gpt-4.1"),
   question = NULL,
   close_action = c("stop", "clear"),
   ...
