@@ -103,8 +103,16 @@ quartohelp_chat_server <- function(
 ) {
   store <- quarto_ragnar_store()
   close_action <- match.arg(close_action)
+  force(client)
 
   function(input, output, session) {
+
+    if (!inherits(client, "Chat")) {
+      # client can be a function returning a ellmer Chat.
+      # This is used for apps that need one client per session
+      # eg: when hosting this app for multiple users.
+      client <- client()
+    }
 
     complete_task <- shiny::ExtendedTask$new(function(client, store, question) {
       value <- quartohelp_complete(client, store, question)
