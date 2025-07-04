@@ -6,7 +6,7 @@
 \usage{
 ask(
   question = NULL,
-  client = ellmer::chat_openai(model = "gpt-4.1"),
+  client = function() ellmer::chat_openai(model = "gpt-4.1"),
   interactive = TRUE
 )
 }
@@ -14,8 +14,8 @@ ask(
 \item{question}{A character string with the user's question (optional). If
 not provided, app opens with a blank chat.}
 
-\item{client}{An \code{ellmer::Chat} object. Defaults to openai 'gpt-4.1'. Note
-that if a different chat provider is used for chat, an \code{OPENAI_API_KEY}
+\item{client}{A closure that returns an \code{ellmer::Chat} object. Defaults to openai
+'gpt-4.1'. Note that if a different chat provider is used for chat, an \code{OPENAI_API_KEY}
 must still be set for embedding vector search.}
 
 \item{interactive}{Logical; whether to launch the interactive Shiny app

@@ -9,8 +9,8 @@
 #'
 #' @param question A character string with the user's question (optional). If
 #'   not provided, app opens with a blank chat.
-#' @param client An `ellmer::Chat` object. Defaults to openai 'gpt-4.1'. Note
-#'   that if a different chat provider is used for chat, an `OPENAI_API_KEY`
+#' @param client A closure that returns an `ellmer::Chat` object. Defaults to openai 
+#'   'gpt-4.1'. Note that if a different chat provider is used for chat, an `OPENAI_API_KEY`
 #'   must still be set for embedding vector search.
 #' @param interactive Logical; whether to launch the interactive Shiny app
 #'   (default `TRUE`). If `FALSE`, returns chat response directly if `question`
@@ -28,7 +28,7 @@
 #' }
 ask <- function(
   question = NULL,
-  client = ellmer::chat_openai(model = "gpt-4.1"),
+  client = \() ellmer::chat_openai(model = "gpt-4.1"),
   interactive = TRUE
 ) {
   # Early check for OpenAI API Key
@@ -47,13 +47,13 @@ ask <- function(
   }
 
   store <- quarto_ragnar_store()
-  client <- quartohelp_setup_client(client, store)
 
   if (!interactive) {
-    if (is.null(client)) {
+    client <- quartohelp_setup_client(client, store = store)
+    if (is.null(question)) {
       return(client)
     } else {
-      return(quartohelp_complete(client, store, question, async = FALSE))
+      return(client$chat(!!!question))
     }
   }
 
@@ -72,11 +72,19 @@ quartohelp_chat_ui <- function(question) {
     question <- list(list(role = "user", content = question))
   }
 
-  bslib::page_fillable(
-    style = "display: flex; flex-direction: column; height: 100vh; padding: 0.5rem;",
-    shiny::h1(
-      "Quarto Help",
-      style = "margin-bottom: 0.5rem; text-align: center;"
+  bslib::page_sidebar(
+    title = "Quarto Help",
+    sidebar = bslib::sidebar(
+      open = TRUE,
+      shiny::div(
+        class = "btn-toolbar",
+        shiny::div(
+          class = "btn-group btn-group-sm",
+          shiny::actionButton("new_chat", label  = "New", icon = shiny::icon("plus")),
+          shiny::actionButton("delete_chat", label  = "Delete", icon = shiny::icon("trash"))
+        )
+      ),
+      chatListUI("chat_list")
     ),
     shinychat::chat_ui(
       "chat",
@@ -88,48 +96,170 @@ quartohelp_chat_ui <- function(question) {
       label = "",
       class = "btn-close",
       style = "position: fixed; top: 6px; right: 6px;"
-    )
+    ),
+    open_chat_links_in_new_window()
   )
 }
 
 #' Shiny Server for QuartoHelp Chat (with Initial Stream)
+#' 
+#' By default, history is stored in the package cache directory.
+#' You can customize the location and the functionality of saving and loading
+#' chats with the options:
+#' 
+#' - `quartohelp.history_dir`: A function that takes a Shiny session and returns
+#'   the directory where chat history should be stored.
+#' - `quartohelp.load_state`: A function that takes a Shiny session and returns
+#'   the initial state of the chat history. Called when the app starts to load
+#'   the current state.
+#' - `quartohelp.save_state`: A function that takes a Shiny session and the
+#'  current chat history, and saves it to the specified directory. Called at the
+#'  end of the session to save the current state.
+#' 
+#' For example use `option(``quartohelp.history_dir = function(session) "path/to/dir")` 
+#' to set the history directory to a custom location.
+#' 
 #' @noRd
 quartohelp_chat_server <- function(
   store,
-  client = ellmer::chat_openai(model = "gpt-4.1"),
+  client = \() ellmer::chat_openai(model = "gpt-4.1"),
   question = NULL,
   close_action = c("stop", "clear"),
   ...
 ) {
+  
+  force(client)
   store <- quarto_ragnar_store()
   close_action <- match.arg(close_action)
-  force(client)
 
   function(input, output, session) {
 
-    if (!inherits(client, "Chat")) {
-      # client can be a function returning a ellmer Chat.
-      # This is used for apps that need one client per session
-      # eg: when hosting this app for multiple users.
-      client <- client()
-    }
+    chat <- reactiveVal(NULL, "currently active chat")
+    selected <- shiny::reactiveVal(NULL, "id of the currently selected chat")
+    client <- quartohelp_setup_client(client, store)
 
-    complete_task <- shiny::ExtendedTask$new(function(client, store, question) {
-      value <- quartohelp_complete(client, store, question)
-      promises::then(
-        promises::promise_resolve(value),
-        function(stream) {
-          shinychat::chat_append("chat", stream)
-        }
-      )
+    complete_task <- shiny::ExtendedTask$new(function(turns, question) {
+      client$set_turns(turns)
+      value <- client$stream_async(!!!question)
+      value |> 
+        promises::promise_resolve() |> 
+        promises::then(
+          function(stream) {
+            shinychat::chat_append("chat", stream)
+          }
+        )
     })
 
+    loaded_chats <- quartohelp_load_state(session)
     if (!is.null(question)) {
-      complete_task$invoke(client, store, question)
+      ch <- new_chat()
+      loaded_chats <- append(list(ch), loaded_chats)
     }
 
+    chats <- shiny::reactiveVal(loaded_chats %||% list(new_chat()))
+    
+    chatListServer(
+      "chat_list",
+      chats = chats,
+      selected = selected
+    )
+
+    progress <- reactiveVal(NULL)
+    observe({
+      current_chats <- isolate(chats())
+      current_chat <- isolate(chat())
+      p <- shiny::isolate(progress())
+      task_status <- isolate(complete_task$status())
+      
+      sel <- selected() %||% current_chats[[1]]$id
+
+      # if a completion is running, we don't switch chat just yet
+      # instead, we show a progress bar and wait a little for completion
+      if(task_status == "running") {
+        if (is.null(p)) {
+          p <- shiny::Progress$new()
+          progress(p)
+        }
+        p$inc(message = "Wait for completion", amount = 0.05)
+        invalidateLater(500, session = session)
+        return()
+      } else {
+        # cleanup the progress bar when the task is not running
+        if (!is.null(p)) {
+          p$close()
+          progress(NULL)
+        }
+      }
+      
+      # save current turns in the chat object
+      if (!is.null(current_chat)) {
+        chats(lapply(current_chats, function(ch) {
+          if (ch$id == current_chat$id) {
+            ch$turns <- client$get_turns()
+          }
+          ch
+        }))
+      }
+
+      for(ch in current_chats) {
+        if (ch$id == sel) {
+          chat(ch)
+          break
+        }
+      }
+    })
+
+    observeEvent(chat(), {
+      # Clear the current chat
+      shinychat::chat_clear("chat")
+      client$set_turns(chat()$turns)
+
+      # Append messages of the new chat
+      lapply(chat()$turns, function(x) {
+        msg <- list(
+          role = x@role,
+          content = ellmer::contents_markdown(x)
+        )
+
+        shinychat::chat_append_message("chat", msg, chunk = FALSE)
+      })
+
+      # Invoke question if it's not NULL and reset
+      if (!is.null(question)) {
+        shinychat::chat_append_message(
+          "chat", 
+          list(role = "user", content = question), 
+          chunk = FALSE
+        )
+        complete_task$invoke(chat()$turns, question)
+        question <<- NULL
+      }
+    })
+
+    observeEvent(input$new_chat, {
+      ch <- new_chat()
+      chats(append(list(ch), chats()))
+      selected(ch$id)
+    })
+
+    observeEvent(input$delete_chat, {
+      current_chats <- chats()
+      sel <- selected()
+
+      filtered_chats <- Filter(
+        function(x) x$id != sel,
+        current_chats
+      )
+      
+      if (length(filtered_chats) == 0) {
+        filtered_chats <- list(new_chat())
+      }
+      selected(filtered_chats[[1]]$id)
+      chats(filtered_chats)
+    })
+
     shiny::observeEvent(input$chat_user_input, {
-      complete_task$invoke(client, store, input$chat_user_input)
+      complete_task$invoke(chat()$turns, input$chat_user_input)
     })
 
     shiny::observeEvent(input$close_btn, {
@@ -150,139 +280,209 @@ quartohelp_chat_server <- function(
     shiny::observeEvent(complete_task$status(), {
       if (complete_task$status() == "error") {
         complete_task$result() # reraise error
+        return()
       }
+
+      if (complete_task$status() != "success") {
+        return()
+      } 
+
+      # After a successful task complete, we update the chat list
+      # with the current chat's turns and title.
+      chats() |> 
+        lapply(function(ch) {
+          if (ch$id == chat()$id) {
+            ch$turns <- client$get_turns()
+            ch$last_message <- Sys.time()
+          }
+          if (is.null(ch$title) && length(ch$turns) > 0) {
+            ch$title <- generate_chat_title(ch$turns)
+          }
+          ch
+        }) |>
+        chats()
+
+    })
+
+    session$onSessionEnded(function() {
+      chats <- isolate(chats())
+      quartohelp_save_state(session, chats)
     })
   }
 }
 
-# Creates a stream of chat results but instead of directly passing the user input
-# to the model, it first generates a query using a different model, extracts excerpts
-# and then inject those into the turns for the chat model.
-quartohelp_complete <- function(client, store, question, async = TRUE) {
-  # only for small questions.
-  # also don't do it for follow up questions
-  if (nchar(question) < 500 && length(client$get_turns()) < 2) {
-    # temporary chat for making the tool call.
-    chat <- ellmer::chat_openai("gpt-4.1-nano") |>
-      quartohelp_setup_client(store)
-
-    queries <- chat$chat_structured(
-      echo = FALSE,
-      type = ellmer::type_array(
-        "queries",
-        items = ellmer::type_string("a query. escaped if needed")
-      ),
-      glue::trim(glue::glue(
-        "
-        You are going to search on the Quarto Knowledge store. First generate up to
-        3 search queries related to the question below. You don't always need to
-        generate 3 queries. Be wise.
-
-        {question}
-        "
-      ))
-    )
-
-    # using a fixed retrieve tool for all requests already avoids repeated
-    # documents to appear in the output.
-    retrieve_tool <- client$get_tools()$rag_retrieve_quarto_excerpts
-    tool_requests <- lapply(queries, function(query) {
-      ellmer::ContentToolRequest(
-        id = rlang::hash(query),
-        name = "rag_retrieve_quarto_excerpts",
-        arguments = list(text = query),
-        # we're faking the request so we don't care about the function
-        tool = retrieve_tool
-      )
-    })
-
-    client$add_turn(
-      ellmer::Turn("user", contents = list(ellmer::ContentText(question))),
-      ellmer::Turn("assistant", contents = tool_requests)
-    )
-
-    question <-lapply(tool_requests, function(req) {
-      ellmer::ContentToolResult(
-        request = req,
-        value = req@tool@fun(req@arguments$text)
-      )
-    })
-  } else {
-    # we need it to be a list for later
-    question <- list(question)
-  }
-
-  if (async) {
-    client$stream_async(!!!question)
-  } else {
-    client$chat(!!!question)
-  }
-}
-
-
+#' @param client a closure that returns an ellmer::Chat
+#' @noRd
 quartohelp_setup_client <- function(client, store) {
-  client$set_system_prompt(glue::trim(
-    "
-    You are an expert in Quarto documentation. You are concise.
-    Always perform a search of the Quarto knowledge store for each user request.
-    Every response must cite links to official documentation sources.
-    If the request is ambiguous, search first, then ask a clarifying question.
-    If docs are unavailable or search fails, inform the user and do NOT answer the question.
-
-    Always give answers that include a minimal fully self-contained quarto document.
-
-    To display quarto code blocks, use oversized markdown fences, like this:
-
-    ````` markdown
-    PROSE HERE
-    ```{r}
-    CODE HERE
-    ```
-    ```{python}
-    CODE HERE
-    ```
-    `````
-    "
-  ))
-
-  retrieve_tool <- quartohelp_retrieve_tool(store)
-
-  client$register_tool(retrieve_tool)
-  client
+  ragnar:::chat_ragnar(
+    function() {
+      client <- client()
+      # Don't override the system prompt if it is already set.
+      if (is.null(client$get_system_prompt())) {
+        client$set_system_prompt(paste(readLines(
+          system.file("prompt", "quartohelp_system.txt", package = "quartohelp")
+        ), collapse =  "\n"))  
+      }
+      client
+    },
+    store = store
+  )
 }
 
+chatListUI <- function(id) {
+  uiOutput(shiny::NS(id, "chats"))
+}
 
-quartohelp_retrieve_tool <- function(store) {
-  retrieved_ids <- integer()
-  rag_retrieve_quarto_excerpts <- function(text) {
-    # Retrieve relevant chunks using hybrid (vector/BM25) search,
-    # excluding previously returned IDs in this session.
-    chunks <- dplyr::tbl(store) |>
-      dplyr::filter(!.data$id %in% retrieved_ids) |>
-      ragnar::ragnar_retrieve(text, top_k = 10)
+chatListServer <- function(id, chats, selected) {
+  stopifnot(is.reactive(chats))
+  shiny::moduleServer(id, function(input, output, session) {
+    ns <- session$ns
 
-    retrieved_ids <<- unique(c(retrieved_ids, chunks$id))
+    output$chats <- shiny::renderUI({
+      chats <- chats()
 
-    stringi::stri_c(
-      "<excerpt>",
-      chunks$text,
-      "</excerpt>",
-      sep = "\n",
-      collapse = "\n"
-    )
+      # reorder chats by last message time
+      if (length(chats)) {
+        chats <- chats[order(sapply(chats, function(x) x$last_message), decreasing = TRUE)]
+      }
+
+      sel <- selected() %||% chats[[1]]$id
+
+      shiny::tags$ul(
+        class = "list-group list-group-flush",
+        !!!lapply(
+          chats, 
+          function(x) {
+
+            class <- "list-group-item list-group-item-action"
+            if (x$id == sel) {
+              class <- paste(class, "active disabled")
+            }
+
+            unclassedActionButton(
+              inputId = ns(paste0("chat-", x$id)), 
+              label = x$title %||% "Untitled chat", 
+              class = class
+            )
+          }
+        )
+      )
+    })
+
+    shiny::observe({
+      lapply(chats(), function(x) {
+        observeEvent(input[[paste0("chat-", x$id)]], {
+          selected(x$id)
+        }, ignoreInit = TRUE)
+      })
+    })
+  })
+}
+
+unclassedActionButton <- function(inputId, label, class = NULL, ...) {
+  shiny::tags$button(
+    id = inputId,
+    class = paste("action-button", class, collapse = " "),
+    type = "button",
+    label,
+    ...
+  )
+}
+
+generate_chat_title <- function(turns) {
+  cli <- ellmer::chat_openai(model = "gpt-4.1-nano")
+  cli$set_turns(turns)
+  cli$chat_structured(
+    "Create a title for this conversation. No more than 4 words.", 
+    type = ellmer::type_string()
+  )
+}
+
+new_chat <- function() {
+  list(
+    id = timestamp(),
+    turns = list(),
+    title = NULL,
+    last_message = Sys.time()
+  )
+}
+
+timestamp <- function() {
+  paste0("chat_", format(Sys.time(), "%Y-%m-%d_%H-%M-%OS6"))
+}
+
+quartohelp_history_dir <- function(session) {
+  if (is.function(history <- getOption("quartohelp.history_dir"))) {
+    history(session)
   }
 
-  ellmer::tool(
-    rag_retrieve_quarto_excerpts,
-    glue::trim(
-      "
-      Use this tool to retrieve the most relevant excerpts from the Quarto
-      knowledge store for a given text input. This function:
-      - uses both vector (semantic) similarity and BM25 text search.
-      - never returns the same excerpt twice in the same session; it always excludes recently retrieved IDs.
-      - returns the results as plain text wrapped in <excerpt> tags.
-      "
-    ),
-    text = ellmer::type_string()
+  dir <- file.path(tools::R_user_dir("quartohelp", which = "data"), "history")
+  if (!dir.exists(dir)) {
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  dir
+}
+
+quartohelp_load_state <- function(session) {
+  if (is.function(load_state <- getOption("quartohelp.load_state"))) {
+    load_state(session)
+  }
+
+  res <- list.files(quartohelp_history_dir(session), full.names = TRUE) |> 
+    sort(decreasing = TRUE) |> 
+    lapply(readRDS)
+  if (length(res) == 0) return(NULL)
+  res
+}
+
+quartohelp_save_state <- function(session, chats) {
+  if (is.function(save_state <- getOption("quartohelp.save_state"))) {
+    save_state(session, chats)
+  }
+
+  dir <- quartohelp_history_dir(session)
+  unlink(dir, recursive = TRUE)
+  if (!dir.exists(dir)) {
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  lapply(chats, function(chat) {
+    # Do not save empty chats
+    if (length(chat$turns) == 0) {
+      return(NULL)
+    }
+    saveRDS(chat, file.path(dir, paste0(chat$id, ".rds")))
+  })
+}
+
+quartohelp_clean_history <- function(session) {
+  dir <- quartohelp_history_dir()
+  files <- list.files(dir, full.names = TRUE)
+  file.remove(files)
+  invisible(NULL)
+}
+
+open_chat_links_in_new_window <- function() {
+  tags$script(
+    HTML(
+      r"---(
+  document.getElementById('chat').addEventListener('click', function(event) {
+    // Find the closest link element (in case user clicks on nested elements)
+    const link = event.target.closest('a');
+    
+    if (link) {
+        const href = link.href;
+    
+        // Check if the link starts with http:// or https://
+        if (href && /^https?:\/\//.test(href)) {
+            // Prevent the default link behavior
+            event.preventDefault();
+    
+            // Open the link in a new window
+            window.open(href, '_blank');
+        }
+    }
+    });
+      )---"
+    )
   )
 }
