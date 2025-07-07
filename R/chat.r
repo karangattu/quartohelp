@@ -256,19 +256,15 @@ quartohelp_retrieve_tool <- function(store) {
   rag_retrieve_quarto_excerpts <- function(text) {
     # Retrieve relevant chunks using hybrid (vector/BM25) search,
     # excluding previously returned IDs in this session.
-    chunks <- dplyr::tbl(store) |>
-      dplyr::filter(!.data$id %in% retrieved_ids) |>
-      ragnar::ragnar_retrieve(text, top_k = 10)
-
-    retrieved_ids <<- unique(c(retrieved_ids, chunks$id))
-
-    stringi::stri_c(
-      "<excerpt>",
-      chunks$text,
-      "</excerpt>",
-      sep = "\n",
-      collapse = "\n"
+    chunks <- ragnar::ragnar_retrieve(
+      text,
+      top_k = 10,
+      filter = !.data$id %in% retrieved_ids
     )
+
+    retrieved_ids <<- unique(unlist(c(retrieved_ids, chunks$id)))
+    chunks[c("start", "end", "id")] <- NULL
+    chunks
   }
 
   ellmer::tool(
