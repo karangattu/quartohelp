@@ -106,7 +106,6 @@ quartohelp_chat_server <- function(
   force(client)
 
   function(input, output, session) {
-
     if (!inherits(client, "Chat")) {
       # client can be a function returning a ellmer Chat.
       # This is used for apps that need one client per session
@@ -137,7 +136,7 @@ quartohelp_chat_server <- function(
         shiny::stopApp()
       } else if (close_action == "clear") {
         # Do not allow clearing while task is executing.
-        while(complete_task$status() == "running") {
+        while (complete_task$status() == "running") {
           Sys.sleep(0.5)
         }
 
@@ -201,7 +200,7 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
       ellmer::Turn("assistant", contents = tool_requests)
     )
 
-    question <-lapply(tool_requests, function(req) {
+    question <- lapply(tool_requests, function(req) {
       ellmer::ContentToolResult(
         request = req,
         value = req@tool@fun(req@arguments$text)
