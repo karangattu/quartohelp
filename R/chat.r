@@ -163,7 +163,7 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
   # also don't do it for follow up questions
   if (nchar(question) < 500 && length(client$get_turns()) < 2) {
     # temporary chat for making the tool call.
-    chat <- ellmer::chat_openai("gpt-4.1-nano") |>
+    chat <- ellmer::chat_openai(model = "gpt-4.1-nano") |>
       quartohelp_setup_client(store)
 
     queries <- chat$chat_structured(
