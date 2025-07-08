@@ -5,6 +5,7 @@ library(stringr)
 library(dotty)
 library(purrr)
 library(dplyr)
+library(quartohelp)
 
 if (!dir.exists("~/github/quarto-dev/quarto-web")) {
   fs::dir_create("~/github/quarto-dev")
@@ -63,3 +64,6 @@ for (r in seq_len(nrow(sitemap))) {
 ragnar_store_build_index(store)
 
 DBI::dbDisconnect(store@con)
+
+if (require("quartohelp"))
+  fs::file_copy(store_location, quartohelp:::quarto_store_path())
