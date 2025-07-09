@@ -65,5 +65,10 @@ ragnar_store_build_index(store)
 
 DBI::dbDisconnect(store@con)
 
-if (require("quartohelp"))
-  fs::file_copy(store_location, quartohelp:::quarto_store_path())
+if (require("quartohelp")) {
+  fs::file_copy(
+    store_location,
+    quartohelp:::quarto_store_path(),
+    overwrite = TRUE
+  )
+}
