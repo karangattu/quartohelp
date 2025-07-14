@@ -202,7 +202,7 @@ quartohelp_complete <- function(client, store, question, async = TRUE) {
     question <- lapply(tool_requests, function(req) {
       ellmer::ContentToolResult(
         request = req,
-        value = req@tool@fun(req@arguments$text)
+        value = do.call(req@tool, req@arguments)
       )
     })
   } else {
@@ -260,7 +260,6 @@ quartohelp_retrieve_tool <- function(store) {
     )
 
     retrieved_ids <<- unique(unlist(c(retrieved_ids, chunks$chunk_id)))
-    chunks[c("start", "end", "chunk_id")] <- NULL
     chunks
   }
 
@@ -275,6 +274,6 @@ quartohelp_retrieve_tool <- function(store) {
       - returns the results as plain text wrapped in <excerpt> tags.
       "
     ),
-    text = ellmer::type_string()
+    arguments = list(text = ellmer::type_string())
   )
 }
