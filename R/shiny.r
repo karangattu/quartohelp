@@ -23,10 +23,12 @@
 #' @noRd
 quartohelp_app_ui <- function() {
   .register_assets()
+  hosted <- Sys.getenv("QUARTOHELP_HOSTED", "FALSE") %in% c("TRUE", "1", "true")
 
   bslib::page_fillable(
     title = "Quarto Help",
     theme = bslib::bs_theme(version = 5),
+    class = "flex flex-column gap-2",
     shiny::tags$head(
       shiny::singleton(
         shiny::tags$link(
@@ -61,7 +63,7 @@ quartohelp_app_ui <- function() {
         )
       ),
       shiny::div(
-        class = "content-split d-flex flex-row h-100 w-100 gap-1",
+        class = "content-split d-flex flex-row flex-grow-1 w-100 gap-1",
         shiny::div(
           class = "left-pane w-40",
           bslib::card(
@@ -90,6 +92,13 @@ quartohelp_app_ui <- function() {
               )
             ),
             bslib::card_body(
+              class = "flex flex-column gap-0",
+              if (hosted) shiny::div(
+                class = "alert alert-warning alert-dismissible fade show",
+                role = "alert",
+                shiny::tags$button(type="button", class="btn-close", `data-bs-dismiss`="alert", `aria-label`="Close"),
+                shiny::p("All interactions in this app are recorded for analysis and improvement. Please do not include any personal, sensitive, or confidential information.")
+              ),
               shiny::div(
                 id = "chat-pane",
                 shinychat::chat_mod_ui("chat_panel", height = "100%")
@@ -166,6 +175,36 @@ quartohelp_app_ui <- function() {
                 )
               )
             )
+          )
+        )
+      ),
+      if (hosted) shiny::span(
+        class = "align-middle",
+        shiny::p(
+          class = "m-0",
+          "Built with ",
+          shiny::tags$a(
+            href = "https://shiny.posit.co",
+            target = "_blank",
+            "Shiny"
+          ),
+          ", ",
+          shiny::tags$a(
+            href = "https://github.com/posit-dev/ragnar",
+            target = "_blank",
+            "ragnar"
+          ),
+          " and ",
+          shiny::tags$a(
+            href = "https://github.com/posit-dev/ellmer",
+            target = "_blank",
+            "ellmer"
+          ),
+          ", hosted in ",
+          shiny::tags$a(
+            href = "https://connect.posit.cloud",
+            target = "_blank",
+            "Posit Connect Cloud"
           )
         )
       )
