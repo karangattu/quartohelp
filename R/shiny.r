@@ -43,34 +43,29 @@ quartohelp_app_ui <- function() {
       shiny::tags$style(
         shiny::HTML(
           "
-          html, body, .bslib-page { height: 100%; }
-          body, .bslib-page { margin: 0; }
-          .bslib-page .main, [data-bslib-main] { padding: 1rem; }
-          .content-split { display: flex; gap: 0; height: calc(100vh - 2rem); position: relative; }
-          .left-pane { flex: 0 0 var(--left-pane-width, 40%); min-width: 240px; max-width: 80%; display: flex; flex-direction: column; }
-          .right-pane { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 20%; }
-          .left-pane, .right-pane { min-height: 0; }
+          .w-40 { width: 40% !important; }
+          
           .split-resizer { width: 6px; cursor: col-resize; background: transparent; position: relative; }
-          .split-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
+          .split-resizer::after { content: ''; position: absolute; top: 50%; height: 30px; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
+          
           #toggle-chat-show { display: none; }
+          
           .collapsed-left #toggle-chat-show { display: inline-flex; }
-          .card { display: flex; flex-direction: column; height: 100%; }
-          .card-body { flex: 1; overflow: auto; }
-          .iframe-wrap { flex: 1; }
-          iframe { width: 100%; height: 100%; border: none; }
           .collapsed-left .left-pane, .collapsed-left .split-resizer { display: none !important; }
           .collapsed-left .split-reveal { display: flex !important; }
           .collapsed-left .right-pane { flex: 1 1 auto; }
+          
           .resizing iframe { pointer-events: none !important; }
           .resizing, .resizing * { cursor: col-resize !important; }
           "
         )
       ),
       shiny::div(
-        class = "content-split",
+        class = "content-split d-flex flex-row h-100 w-100 gap-1",
         shiny::div(
-          class = "left-pane",
+          class = "left-pane w-40",
           bslib::card(
+            class = "h-100 d-flex flex-column",
             bslib::card_header(
               shiny::div(
                 class = "d-flex align-items-center justify-content-between gap-2",
@@ -102,10 +97,14 @@ quartohelp_app_ui <- function() {
             )
           )
         ),
-        shiny::div(id = "split-resizer", class = "split-resizer"),
         shiny::div(
-          class = "right-pane",
+          id = "split-resizer", 
+          class = "split-resizer"
+        ),
+        shiny::div(
+          class = "right-pane flex-grow-1",
           bslib::card(
+            class = "h-100 d-flex flex-column",
             bslib::card_header(
               shiny::div(
                 class = "d-flex align-items-center justify-content-between gap-3",
@@ -151,9 +150,10 @@ quartohelp_app_ui <- function() {
               )
             ),
             bslib::card_body(
+              class= "p-0",
               shiny::div(
                 id = "iframe-container",
-                class = "iframe-wrap",
+                class = "iframe-wrap flex-grow-1",
                 shiny::p(
                   id = "iframe-placeholder",
                   "Loading documentation..."
@@ -201,13 +201,15 @@ quartohelp_app_server <- function(
     chat <- make_chat()
     chat_module <- shinychat::chat_mod_server("chat_panel", chat)
 
-    session$onFlushed(
-      function() {
-        chat_module$update_user_input(value = initial_question, submit = TRUE)
-      },
-      once = TRUE
-    )
-
+    if (!is.null(initial_question)) {
+      session$onFlushed(
+        function() {
+          chat_module$update_user_input(value = initial_question, submit = TRUE)
+        },
+        once = TRUE
+      )
+    }
+    
     shiny::observeEvent(input$clear_chat, {
       chat_module$clear()
     })
