@@ -23,10 +23,12 @@
 #' @noRd
 quartohelp_app_ui <- function() {
   .register_assets()
+  hosted <- Sys.getenv("QUARTOHELP_HOSTED", "FALSE") %in% c("TRUE", "1", "true")
 
   bslib::page_fillable(
     title = "Quarto Help",
     theme = bslib::bs_theme(version = 5),
+    class = "flex flex-column gap-2",
     shiny::tags$head(
       shiny::singleton(
         shiny::tags$link(
@@ -43,34 +45,29 @@ quartohelp_app_ui <- function() {
       shiny::tags$style(
         shiny::HTML(
           "
-          html, body, .bslib-page { height: 100%; }
-          body, .bslib-page { margin: 0; }
-          .bslib-page .main, [data-bslib-main] { padding: 1rem; }
-          .content-split { display: flex; gap: 0; height: calc(100vh - 2rem); position: relative; }
-          .left-pane { flex: 0 0 var(--left-pane-width, 40%); min-width: 240px; max-width: 80%; display: flex; flex-direction: column; }
-          .right-pane { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 20%; }
-          .left-pane, .right-pane { min-height: 0; }
+          .w-60 { width: 60% !important; }
+          
           .split-resizer { width: 6px; cursor: col-resize; background: transparent; position: relative; }
-          .split-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
+          .split-resizer::after { content: ''; position: absolute; top: 50%; height: 30px; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
+          
           #toggle-chat-show { display: none; }
+          
           .collapsed-left #toggle-chat-show { display: inline-flex; }
-          .card { display: flex; flex-direction: column; height: 100%; }
-          .card-body { flex: 1; overflow: auto; }
-          .iframe-wrap { flex: 1; }
-          iframe { width: 100%; height: 100%; border: none; }
           .collapsed-left .left-pane, .collapsed-left .split-resizer { display: none !important; }
           .collapsed-left .split-reveal { display: flex !important; }
           .collapsed-left .right-pane { flex: 1 1 auto; }
+          
           .resizing iframe { pointer-events: none !important; }
           .resizing, .resizing * { cursor: col-resize !important; }
           "
         )
       ),
       shiny::div(
-        class = "content-split",
+        class = "content-split d-flex flex-row flex-grow-1 w-100 gap-1",
         shiny::div(
-          class = "left-pane",
+          class = "left-pane w-40 flex-grow-1",
           bslib::card(
+            class = "h-100 d-flex flex-column",
             bslib::card_header(
               shiny::div(
                 class = "d-flex align-items-center justify-content-between gap-2",
@@ -86,7 +83,7 @@ quartohelp_app_ui <- function() {
                   shiny::tags$button(
                     id = "toggle-chat",
                     type = "button",
-                    class = "btn btn-sm btn-outline-secondary",
+                    class = "btn btn-sm btn-outline-secondary d-none d-sm-block",
                     title = "Collapse chat",
                     `aria-label` = "Collapse chat",
                     shiny::icon("chevron-left")
@@ -95,6 +92,13 @@ quartohelp_app_ui <- function() {
               )
             ),
             bslib::card_body(
+              class = "flex flex-column gap-0",
+              if (hosted) shiny::div(
+                class = "alert alert-warning alert-dismissible fade show",
+                role = "alert",
+                shiny::tags$button(type="button", class="btn-close", `data-bs-dismiss`="alert", `aria-label`="Close"),
+                shiny::p("All interactions in this app are recorded for analysis and improvement. Please do not include any personal, sensitive, or confidential information.")
+              ),
               shiny::div(
                 id = "chat-pane",
                 shinychat::chat_mod_ui("chat_panel", height = "100%")
@@ -102,10 +106,14 @@ quartohelp_app_ui <- function() {
             )
           )
         ),
-        shiny::div(id = "split-resizer", class = "split-resizer"),
         shiny::div(
-          class = "right-pane",
+          id = "split-resizer", 
+          class = "split-resizer d-none d-sm-block"
+        ),
+        shiny::div(
+          class = "right-pane flex-grow-1 w-60 d-none d-sm-block",
           bslib::card(
+            class = "h-100 d-flex flex-column",
             bslib::card_header(
               shiny::div(
                 class = "d-flex align-items-center justify-content-between gap-3",
@@ -151,9 +159,10 @@ quartohelp_app_ui <- function() {
               )
             ),
             bslib::card_body(
+              class= "p-0",
               shiny::div(
                 id = "iframe-container",
-                class = "iframe-wrap",
+                class = "iframe-wrap flex-grow-1",
                 shiny::p(
                   id = "iframe-placeholder",
                   "Loading documentation..."
@@ -166,6 +175,36 @@ quartohelp_app_ui <- function() {
                 )
               )
             )
+          )
+        )
+      ),
+      if (hosted) shiny::span(
+        class = "align-middle",
+        shiny::p(
+          class = "m-0",
+          "Built with ",
+          shiny::tags$a(
+            href = "https://shiny.posit.co",
+            target = "_blank",
+            "Shiny"
+          ),
+          ", ",
+          shiny::tags$a(
+            href = "https://github.com/posit-dev/ragnar",
+            target = "_blank",
+            "ragnar"
+          ),
+          " and ",
+          shiny::tags$a(
+            href = "https://github.com/posit-dev/ellmer",
+            target = "_blank",
+            "ellmer"
+          ),
+          ", hosted in ",
+          shiny::tags$a(
+            href = "https://connect.posit.cloud",
+            target = "_blank",
+            "Posit Connect Cloud"
           )
         )
       )
@@ -201,13 +240,15 @@ quartohelp_app_server <- function(
     chat <- make_chat()
     chat_module <- shinychat::chat_mod_server("chat_panel", chat)
 
-    session$onFlushed(
-      function() {
-        chat_module$update_user_input(value = initial_question, submit = TRUE)
-      },
-      once = TRUE
-    )
-
+    if (!is.null(initial_question)) {
+      session$onFlushed(
+        function() {
+          chat_module$update_user_input(value = initial_question, submit = TRUE)
+        },
+        once = TRUE
+      )
+    }
+    
     shiny::observeEvent(input$clear_chat, {
       chat_module$clear()
     })

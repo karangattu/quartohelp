@@ -87,6 +87,17 @@
       }
     }, true);
 
+    const mq = window.matchMedia('(min-width: 576px)'); // Bootstrap’s sm breakpoint
+    function handleWindowSizeChange(e) {
+      if (!e.matches) {
+        const root = document.querySelector('.content-split');
+        root.classList.remove('collapsed-left');
+      }
+    }
+
+    mq.addEventListener('change', handleWindowSizeChange);
+    handleWindowSizeChange(mq);
+
     (function(){
       function setupSplit(){
         const res = document.getElementById('split-resizer');
