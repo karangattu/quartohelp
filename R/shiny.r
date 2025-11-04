@@ -190,13 +190,13 @@ quartohelp_app_ui <- function() {
           ),
           ", ",
           shiny::tags$a(
-            href = "https://github.com/posit-dev/ragnar",
+            href = "http://ragnar.tidyverse.org",
             target = "_blank",
             "ragnar"
           ),
           " and ",
           shiny::tags$a(
-            href = "https://github.com/posit-dev/ellmer",
+            href = "http://ellmer.tidyverse.org",
             target = "_blank",
             "ellmer"
           ),
