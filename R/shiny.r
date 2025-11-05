@@ -28,7 +28,6 @@ quartohelp_app_ui <- function() {
   bslib::page_fillable(
     title = "Quarto Help",
     theme = bslib::bs_theme(version = 5),
-    class = "flex flex-column gap-2",
     shiny::tags$head(
       shiny::singleton(
         shiny::tags$link(
@@ -62,8 +61,9 @@ quartohelp_app_ui <- function() {
           "
         )
       ),
+      shiny::div(class = "h-100 d-flex flex-column gap-2",
       shiny::div(
-        class = "content-split d-flex flex-row flex-grow-1 w-100 h-100 gap-1",
+        class = "content-split d-flex flex-row flex-grow-1 w-100 gap-1",
         shiny::div(
           class = "left-pane w-40 flex-grow-1 flex-sm-grow-0",
           bslib::card(
@@ -209,7 +209,7 @@ quartohelp_app_ui <- function() {
         )
       )
     )
-  )
+  ))
 }
 
 #' Internal server for the Quarto Help app
