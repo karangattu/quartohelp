@@ -45,8 +45,8 @@ quartohelp_app_ui <- function() {
       shiny::tags$style(
         shiny::HTML(
           "
-          .w-60 { width: 60% !important; }
-          
+          .w-40 { width: 40%; }
+
           .split-resizer { width: 6px; cursor: col-resize; background: transparent; position: relative; }
           .split-resizer::after { content: ''; position: absolute; top: 50%; height: 30px; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
           
@@ -65,7 +65,7 @@ quartohelp_app_ui <- function() {
       shiny::div(
         class = "content-split d-flex flex-row flex-grow-1 w-100 h-100 gap-1",
         shiny::div(
-          class = "left-pane w-40 flex-grow-1",
+          class = "left-pane w-40 flex-grow-1 flex-sm-grow-0",
           bslib::card(
             class = "h-100 d-flex flex-column",
             bslib::card_header(
@@ -111,7 +111,7 @@ quartohelp_app_ui <- function() {
           class = "split-resizer d-none d-sm-block"
         ),
         shiny::div(
-          class = "right-pane flex-grow-1 w-60 d-none d-sm-block",
+          class = "right-pane flex-grow-0 flex-sm-grow-1 d-none d-sm-block",
           bslib::card(
             class = "h-100 d-flex flex-column",
             bslib::card_header(
