@@ -64,6 +64,7 @@ quartohelp_app_ui <- function() {
       shiny::div(class = "h-100 d-flex flex-column gap-2",
       shiny::div(
         class = "content-split d-flex flex-row flex-grow-1 w-100 gap-1",
+        style="min-height: 0;",
         shiny::div(
           class = "left-pane w-40 flex-grow-1 flex-sm-grow-0",
           bslib::card(
