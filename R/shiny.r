@@ -63,7 +63,7 @@ quartohelp_app_ui <- function() {
         )
       ),
       shiny::div(
-        class = "content-split d-flex flex-row flex-grow-1 w-100 gap-1",
+        class = "content-split d-flex flex-row flex-grow-1 w-100 h-100 gap-1",
         shiny::div(
           class = "left-pane w-40 flex-grow-1",
           bslib::card(
@@ -92,7 +92,7 @@ quartohelp_app_ui <- function() {
               )
             ),
             bslib::card_body(
-              class = "flex flex-column gap-0",
+              class = "flex flex-column gap-0 overflow-scroll",
               if (hosted) shiny::div(
                 class = "alert alert-warning alert-dismissible fade show",
                 role = "alert",
