@@ -4,16 +4,26 @@
 \alias{launch_app_simple}
 \title{Launch a simple Quarto Help chat app}
 \usage{
-launch_app_simple(question = NULL)
+launch_app_simple(
+  initial_question = NULL,
+  initial_chat = new_chat(),
+  new_chat = chat_quartohelp
+)
 }
 \arguments{
-\item{question}{Optional character string to send as the first user turn.}
+\item{initial_question}{Optional character string to send as the first user turn.}
+
+\item{initial_chat}{Optional \code{ellmer::Chat} instance seeded into the app. Defaults
+to \code{new_chat()} so a fresh chat is created when none is supplied.}
+
+\item{new_chat}{A function that returns a fresh \code{ellmer::Chat} instance. Used
+whenever the conversation is reset. Defaults to \code{\link[=chat_quartohelp]{chat_quartohelp()}}.}
 }
 \value{
-Invisibly returns \code{NULL}.
+Invisibly returns the chat instance used by the app.
 }
 \description{
-Provides a bare-bones Shiny example that wires \code{\link[=configure_chat]{configure_chat()}} into the
+Provides a bare-bones Shiny example that wires \code{\link[=as_quartohelp_chat]{as_quartohelp_chat()}} into the
 \href{https://rstudio.github.io/shinychat/}{\code{shinychat}} UI module. The app mirrors
 just the chat pane from \code{\link[=launch_app]{launch_app()}} without the documentation browser or
 any advanced controls.

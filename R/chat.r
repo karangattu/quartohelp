@@ -5,7 +5,7 @@
 }
 
 .normalize_question <- function(question) {
-  rlang:::check_string(question, allow_null = TRUE)
+  asNamespace("rlang")$check_string(question, allow_null = TRUE)
   if (is.null(question)) {
     return(NULL)
   }
@@ -21,67 +21,101 @@
 #' Starts an interactive chat interface backed by the Quarto knowledge store.
 #' The app uses [shinychat::chat_mod_ui()] and [shinychat::chat_mod_server()] to
 #' wire a single chat instance and an embedded documentation browser. By
-#' default a fresh chat is created with [quartohelp::chat_client()].
+#' default a fresh chat is created with [quartohelp::chat_quartohelp()].
 #'
-#' @param question Optional character string to send as the first user turn.
-#' @param client An `ellmer::Chat` instance. Defaults to the value returned by
-#'   [quartohelp::chat_client()].
+#' @param initial_question Optional character string to send as the first user turn.
+#' @param new_chat A function that returns a fresh `ellmer::Chat` instance. Used
+#'   whenever the conversation is reset. Defaults to [quartohelp::chat_quartohelp()].
+#' @param initial_chat Optional `ellmer::Chat` instance seeded into the app. Defaults
+#'   to `new_chat()` so a fresh chat is created when none is supplied.
 #'
-#' @return Invisibly returns the `client` object.
-#' @seealso [quartohelp::chat_client()], [quartohelp::configure_chat()]
+#' @return Invisibly returns the chat instance used by the app.
+#' @seealso [quartohelp::chat_quartohelp()], [quartohelp::as_quartohelp_chat()]
 #' @export
 #' @examples
 #' if (interactive() && nzchar(Sys.getenv("OPENAI_API_KEY"))) {
 #'   quartohelp::launch_app()
 #' }
 launch_app <- function(
-  question = NULL,
-  client = chat_client()
+  initial_question = NULL,
+  initial_chat = new_chat(),
+  new_chat = chat_quartohelp
 ) {
   .require_api_key()
-  question <- .normalize_question(question)
 
-  factory <- attr(client, "chat_factory")
-  if (!is.function(factory)) {
-    factory <- chat_client
+  if (!is.function(new_chat)) {
+    stop("`new_chat` must be a function that returns a 'Chat'.", call. = FALSE)
   }
+  question <- .normalize_question(initial_question)
 
-  initial_chat <- client
+  chat <- initial_chat
+  if (!is.null(chat) && !inherits(chat, "Chat")) {
+    stop("`initial_chat` must inherit from 'Chat'.", call. = FALSE)
+  }
+  if (is.null(chat)) {
+    chat <- new_chat()
+    if (!inherits(chat, "Chat")) {
+      stop(
+        "`new_chat()` must return an object that inherits from 'Chat'.",
+        call. = FALSE
+      )
+    }
+  }
 
   app <- shiny::shinyApp(
     ui = quartohelp_app_ui(),
     server = quartohelp_app_server(
-      initial_chat = initial_chat,
-      chat_factory = factory,
+      initial_chat = chat,
+      new_chat = new_chat,
       initial_question = question
     )
   )
 
   # runApp() blocks until the window is closed.
   shiny::runApp(app)
-  invisible(initial_chat)
+  invisible(chat)
 }
 
 #' Launch a simple Quarto Help chat app
 #'
-#' Provides a bare-bones Shiny example that wires [configure_chat()] into the
+#' Provides a bare-bones Shiny example that wires [as_quartohelp_chat()] into the
 #' [`shinychat`](https://rstudio.github.io/shinychat/) UI module. The app mirrors
 #' just the chat pane from [launch_app()] without the documentation browser or
 #' any advanced controls.
 #'
-#' @param question Optional character string to send as the first user turn.
+#' @inheritParams launch_app
 #'
-#' @return Invisibly returns `NULL`.
+#' @return Invisibly returns the chat instance used by the app.
 #' @export
 #' @examples
 #' if (interactive() && nzchar(Sys.getenv("OPENAI_API_KEY"))) {
 #'   quartohelp::launch_app_simple()
 #' }
 launch_app_simple <- function(
-  question = NULL
+  initial_question = NULL,
+  initial_chat = new_chat(),
+  new_chat = chat_quartohelp
 ) {
   .require_api_key()
-  question <- .normalize_question(question)
+
+  if (!is.function(new_chat)) {
+    stop("`new_chat` must be a function that returns a 'Chat'.", call. = FALSE)
+  }
+  question <- .normalize_question(initial_question)
+
+  chat <- initial_chat
+  if (!is.null(chat) && !inherits(chat, "Chat")) {
+    stop("`initial_chat` must inherit from 'Chat'.", call. = FALSE)
+  }
+  if (is.null(chat)) {
+    chat <- new_chat()
+    if (!inherits(chat, "Chat")) {
+      stop(
+        "`new_chat()` must return an object that inherits from 'Chat'.",
+        call. = FALSE
+      )
+    }
+  }
 
   ui <- bslib::page_fillable(
     title = "Quarto Help (Simple Chat)",
@@ -110,60 +144,29 @@ launch_app_simple <- function(
     )
   )
 
-  server <- function(input, output, session) {
-    make_chat <- function() {
-      configure_chat()
-    }
-
-    chat <- shiny::reactiveVal(make_chat())
-    chat_gen <- shiny::reactiveVal(1L)
-    pending_question <- shiny::reactiveVal(question)
-
-    output$chat_panel <- shiny::renderUI({
-      shinychat::chat_mod_ui(paste0("chat_", chat_gen()), height = "100%")
-    })
-
-    shiny::observeEvent(
-      chat_gen(),
-      {
-        module_id <- paste0("chat_", chat_gen())
-        module <- shinychat::chat_mod_server(module_id, chat())
-
-        question <- pending_question()
-        if (!is.null(question)) {
-          pending_question(NULL)
-          session$onFlushed(
-            function() {
-              module$update_user_input(value = question, submit = TRUE)
-            },
-            once = TRUE
-          )
-        }
-      },
-      ignoreInit = FALSE
-    )
-
-    shiny::observeEvent(input$clear_chat, {
-      chat(make_chat())
-      chat_gen(shiny::isolate(chat_gen()) + 1L)
-    })
-  }
+  server <- quartohelp_app_server(
+    initial_chat = chat,
+    new_chat = new_chat,
+    initial_question = question
+  )
 
   shiny::runApp(shiny::shinyApp(ui = ui, server = server))
-  invisible(NULL)
+  invisible(chat)
 }
 
 #' Ask a single question with Quarto Help
 #'
 #' Convenience wrapper that either launches [launch_app()] (the default) or
-#' runs a single turn against the provided chat client when `interactive = FALSE`.
+#' runs a single turn against the provided chat when `interactive = FALSE`.
 #'
 #' @inheritParams launch_app
-#' @param interactive When `FALSE`, return the result of `client$chat(question)`
-#'   instead of launching the app. If `question` is `NULL`, the configured
-#'   `client` is returned so you can continue the conversation manually.
-#' @return When `interactive = TRUE`, invisibly returns the `client`. Otherwise
-#'   returns the chat response or `client`.
+#' @param question Optional character string to send as the first user turn.
+#' @param ... Reserved for future use. Must be empty.
+#' @param interactive When `FALSE`, return the result of `chat$chat(question)`
+#'   instead of launching the app. If `question` is `NULL`, the chat object used
+#'   for the interaction is returned so you can continue the conversation manually.
+#' @return When `interactive = TRUE`, invisibly returns the chat instance used by
+#'   the app. Otherwise returns either the chat response or the chat object.
 #' @export
 #' @examples
 #'
@@ -176,17 +179,40 @@ launch_app_simple <- function(
 #' }
 ask <- function(
   question = NULL,
-  client = chat_client(),
+  ...,
+  initial_chat = NULL,
+  new_chat = chat_quartohelp,
   interactive = TRUE
 ) {
+  rlang::check_dots_empty()
+
   if (!interactive) {
     .require_api_key()
-    question <- .normalize_question(question)
-    if (is.null(question)) {
-      return(client)
+    if (!is.function(new_chat)) {
+      stop(
+        "`new_chat` must be a function that returns a 'Chat'.",
+        call. = FALSE
+      )
     }
-    return(client$chat(question))
+
+    question <- .normalize_question(question)
+    chat <- initial_chat
+    if (is.null(chat)) {
+      chat <- new_chat()
+    }
+    if (!inherits(chat, "Chat")) {
+      stop("`initial_chat` must inherit from 'Chat'.", call. = FALSE)
+    }
+
+    if (is.null(question)) {
+      return(chat)
+    }
+    return(chat$chat(question))
   }
 
-  launch_app(question = question, client = client)
+  launch_app(
+    initial_question = question,
+    initial_chat = initial_chat,
+    new_chat = new_chat
+  )
 }

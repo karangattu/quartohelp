@@ -4,22 +4,29 @@
 \alias{launch_app}
 \title{Launch the Quarto Help chat app}
 \usage{
-launch_app(question = NULL, client = chat_client())
+launch_app(
+  initial_question = NULL,
+  initial_chat = new_chat(),
+  new_chat = chat_quartohelp
+)
 }
 \arguments{
-\item{question}{Optional character string to send as the first user turn.}
+\item{initial_question}{Optional character string to send as the first user turn.}
 
-\item{client}{An \code{ellmer::Chat} instance. Defaults to the value returned by
-\code{\link[=chat_client]{chat_client()}}.}
+\item{initial_chat}{Optional \code{ellmer::Chat} instance seeded into the app. Defaults
+to \code{new_chat()} so a fresh chat is created when none is supplied.}
+
+\item{new_chat}{A function that returns a fresh \code{ellmer::Chat} instance. Used
+whenever the conversation is reset. Defaults to \code{\link[=chat_quartohelp]{chat_quartohelp()}}.}
 }
 \value{
-Invisibly returns the \code{client} object.
+Invisibly returns the chat instance used by the app.
 }
 \description{
 Starts an interactive chat interface backed by the Quarto knowledge store.
 The app uses \code{\link[shinychat:chat_app]{shinychat::chat_mod_ui()}} and \code{\link[shinychat:chat_app]{shinychat::chat_mod_server()}} to
 wire a single chat instance and an embedded documentation browser. By
-default a fresh chat is created with \code{\link[=chat_client]{chat_client()}}.
+default a fresh chat is created with \code{\link[=chat_quartohelp]{chat_quartohelp()}}.
 }
 \examples{
 if (interactive() && nzchar(Sys.getenv("OPENAI_API_KEY"))) {
@@ -27,5 +34,5 @@ if (interactive() && nzchar(Sys.getenv("OPENAI_API_KEY"))) {
 }
 }
 \seealso{
-\code{\link[=chat_client]{chat_client()}}, \code{\link[=configure_chat]{configure_chat()}}
+\code{\link[=chat_quartohelp]{chat_quartohelp()}}, \code{\link[=as_quartohelp_chat]{as_quartohelp_chat()}}
 }
