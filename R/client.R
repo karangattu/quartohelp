@@ -21,22 +21,36 @@ as_quartohelp_chat <- function(
   top_k = 8,
   store = quartohelp_ragnar_store()
 ) {
-  if (is.null(proto)) {
-    proto <- ellmer::chat_openai_responses(
-      model = "gpt-5",
-      params = ellmer::params(
-        reasoning_effort = "low",
-        text = list(verbosity = "low")
-      ),
-      echo = "none"
-    )
-  } else if (inherits(proto, "Chat")) {
+  if (inherits(proto, "Chat")) {
     proto$set_turns(list())
     proto$set_tools(list())
+    chat <- proto
+  } else if (is.null(proto)) {
+    chat <- ellmer::chat_openai(
+      model = "gpt-5",
+      api_args = list(list(
+        reasoning = list(effort = "low"),
+        verbosity = "low"
+      )),
+      # params = ellmer::params(
+      #   text = list(verbosity = "low"),
+      #   reasoning_effort = "low"
+      # ),
+      echo = "none"
+    )
+    # chat$chat("hi")
+    # chat <- ellmer::chat_openai(
+    #   model = "gpt-4.1",
+    #   # params = ellmer::params(reasoning = list(effort = "low", verbosity = "low"),
+    #   echo = "none"
+    # )
   } else if (is.function(proto)) {
-    proto <- proto()
+    chat <- proto()
     if (!inherits(chat, "Chat")) {
-      stop("`proto()` must return an object that inherits from 'Chat'.")
+      stop(
+        "`proto()` must return an object that inherits from 'Chat'.",
+        call. = FALSE
+      )
     }
   } else {
     stop(
@@ -44,7 +58,7 @@ as_quartohelp_chat <- function(
       call. = FALSE
     )
   }
-  chat <- proto
+
   stopifnot(inherits(chat, "Chat"))
   chat$set_system_prompt(c(
     chat$get_system_prompt(),
