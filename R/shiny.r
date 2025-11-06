@@ -271,6 +271,9 @@ quartohelp_app_server <- function(
     )
 
     shiny::observeEvent(input$clear_chat, {
+      # The ragnar retrieve tool is stateful; module$clear() only resets UI history
+      # and leaves the old client (with its registered tools) in place. Instead we
+      # swap in a fresh client and new module id so the tool is reinitialized.
       chat(make_chat())
       pending_question(NULL)
       chat_gen(shiny::isolate(chat_gen()) + 1L)
