@@ -4,25 +4,33 @@
 \alias{ask}
 \title{Ask a single question with Quarto Help}
 \usage{
-ask(question = NULL, client = chat_client(), interactive = TRUE)
+ask(
+  question = NULL,
+  initial_chat = NULL,
+  new_chat = chat_quartohelp,
+  interactive = TRUE
+)
 }
 \arguments{
 \item{question}{Optional character string to send as the first user turn.}
 
-\item{client}{An \code{ellmer::Chat} instance. Defaults to the value returned by
-\code{\link[=chat_client]{chat_client()}}.}
+\item{initial_chat}{Optional \code{ellmer::Chat} instance seeded into the app. When
+\code{NULL}, the app starts with \code{new_chat()}.}
 
-\item{interactive}{When \code{FALSE}, return the result of \code{client$chat(question)}
-instead of launching the app. If \code{question} is \code{NULL}, the configured
-\code{client} is returned so you can continue the conversation manually.}
+\item{new_chat}{A function that returns a fresh \code{ellmer::Chat} instance. Used
+whenever the conversation is reset. Defaults to \code{\link[=chat_quartohelp]{chat_quartohelp()}}.}
+
+\item{interactive}{When \code{FALSE}, return the result of \code{chat$chat(question)}
+instead of launching the app. If \code{question} is \code{NULL}, the chat object used
+for the interaction is returned so you can continue the conversation manually.}
 }
 \value{
-When \code{interactive = TRUE}, invisibly returns the \code{client}. Otherwise
-returns the chat response or \code{client}.
+When \code{interactive = TRUE}, invisibly returns the chat instance used by
+the app. Otherwise returns either the chat response or the chat object.
 }
 \description{
 Convenience wrapper that either launches \code{\link[=launch_app]{launch_app()}} (the default) or
-runs a single turn against the provided chat client when \code{interactive = FALSE}.
+runs a single turn against the provided chat when \code{interactive = FALSE}.
 }
 \examples{
 
