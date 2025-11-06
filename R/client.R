@@ -38,12 +38,6 @@ as_quartohelp_chat <- function(
       # ),
       echo = "none"
     )
-    # chat$chat("hi")
-    # chat <- ellmer::chat_openai(
-    #   model = "gpt-4.1",
-    #   # params = ellmer::params(reasoning = list(effort = "low", verbosity = "low"),
-    #   echo = "none"
-    # )
   } else if (is.function(proto)) {
     chat <- proto()
     if (!inherits(chat, "Chat")) {
