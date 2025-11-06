@@ -48,14 +48,14 @@ quartohelp_app_ui <- function() {
 
           .split-resizer { width: 6px; cursor: col-resize; background: transparent; position: relative; }
           .split-resizer::after { content: ''; position: absolute; top: 50%; height: 30px; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
-          
+
           #toggle-chat-show { display: none; }
-          
+
           .collapsed-left #toggle-chat-show { display: inline-flex; }
           .collapsed-left .left-pane, .collapsed-left .split-resizer { display: none !important; }
           .collapsed-left .split-reveal { display: flex !important; }
           .collapsed-left .right-pane { flex: 1 1 auto; }
-          
+
           .resizing iframe { pointer-events: none !important; }
           .resizing, .resizing * { cursor: col-resize !important; }
           "
@@ -241,19 +241,20 @@ quartohelp_app_server <- function(
   }
   force(new_chat)
 
-  function(input, output, session) {
-    first <- TRUE
-    initial <- initial_chat
-
-    make_chat <- function() {
-      if (first) {
-        first <<- FALSE
-        if (!is.null(initial)) {
-          chat_obj <- initial
-          initial <<- NULL
-          return(chat_obj)
-        }
+  if (!is.null(initial_chat)) {
+    new_chat <- local({
+      supplied_new_chat <- new_chat
+      function() {
+        out <- initial_chat
+        new_chat <<- supplied_new_chat
+        initial_chat <<- NULL
+        out
       }
+    })
+  }
+
+  function(input, output, session) {
+    make_chat <- function() {
       chat_obj <- new_chat()
       if (!inherits(chat_obj, "Chat")) {
         stop(
