@@ -48,14 +48,14 @@ quartohelp_app_ui <- function() {
 
           .split-resizer { width: 6px; cursor: col-resize; background: transparent; position: relative; }
           .split-resizer::after { content: ''; position: absolute; top: 50%; height: 30px; left: 2px; width: 2px; background: var(--bs-border-color, #dee2e6); }
-          
+
           #toggle-chat-show { display: none; }
-          
+
           .collapsed-left #toggle-chat-show { display: inline-flex; }
           .collapsed-left .left-pane, .collapsed-left .split-resizer { display: none !important; }
           .collapsed-left .split-reveal { display: flex !important; }
           .collapsed-left .right-pane { flex: 1 1 auto; }
-          
+
           .resizing iframe { pointer-events: none !important; }
           .resizing, .resizing * { cursor: col-resize !important; }
           "
@@ -241,30 +241,20 @@ quartohelp_app_server <- function(
   }
   force(new_chat)
 
+  if (!is.null(initial_chat)) {
+    new_chat <- local({
+      supplied_new_chat <- new_chat
+      function() {
+        out <- initial_chat
+        initial_chat <<- NULL
+        new_chat <<- supplied_new_chat
+        out
+      }
+    })
+  }
+
   function(input, output, session) {
-    first <- TRUE
-    initial <- initial_chat
-
-    make_chat <- function() {
-      if (first) {
-        first <<- FALSE
-        if (!is.null(initial)) {
-          chat_obj <- initial
-          initial <<- NULL
-          return(chat_obj)
-        }
-      }
-      chat_obj <- new_chat()
-      if (!inherits(chat_obj, "Chat")) {
-        stop(
-          "`new_chat()` must return an object that inherits from 'Chat'.",
-          call. = FALSE
-        )
-      }
-      chat_obj
-    }
-
-    chat <- shiny::reactiveVal(make_chat())
+    chat <- shiny::reactiveVal(new_chat())
     chat_gen <- shiny::reactiveVal(1L)
     pending_question <- shiny::reactiveVal(initial_question)
 
@@ -300,7 +290,7 @@ quartohelp_app_server <- function(
       # The ragnar retrieve tool is stateful; module$clear() only resets UI history
       # and leaves the old client (with its registered tools) in place. Instead we
       # swap in a fresh client and new module id so the tool is reinitialized.
-      chat(make_chat())
+      chat(new_chat())
       pending_question(NULL)
       chat_gen(shiny::isolate(chat_gen()) + 1L)
     })
