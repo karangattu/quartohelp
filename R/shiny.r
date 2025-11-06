@@ -102,12 +102,7 @@ quartohelp_app_ui <- function() {
               ),
               shiny::div(
                 id = "chat-pane",
-                shiny::uiOutput(
-                  "chat_panel",
-                  container = function(...) {
-                    shiny::div(..., style = "height: 100%;")
-                  }
-                )
+                shiny::uiOutput("chat_panel")
               )
             )
           )
@@ -250,7 +245,8 @@ quartohelp_app_server <- function(
     output$chat_panel <- shiny::renderUI({
       shinychat::chat_mod_ui(
         paste0("chat_panel_", chat_gen()),
-        height = "100%"
+        height = "100%",
+        fill = TRUE
       )
     })
 
