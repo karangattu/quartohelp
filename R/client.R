@@ -22,8 +22,6 @@ as_quartohelp_chat <- function(
   store = quartohelp_ragnar_store()
 ) {
   if (inherits(proto, "Chat")) {
-    proto$set_turns(list())
-    proto$set_tools(list())
     chat <- proto
   } else if (is.null(proto)) {
     chat <- ellmer::chat_openai(
@@ -54,33 +52,39 @@ as_quartohelp_chat <- function(
   }
 
   stopifnot(inherits(chat, "Chat"))
-  chat$set_system_prompt(c(
-    chat$get_system_prompt(),
-    glue::trim(
-      "
-      You are an expert in Quarto documentation. You are concise.
-      Always perform a search of the Quarto knowledge store for each user request.
-      Every response must include links to official documentation sources.
-      If the request is ambiguous, search first, then ask a clarifying question.
-      If docs are unavailable, or if search fails, or if docs do not contain an answer
-      to the question, inform the user and do NOT answer the question.
+  quartohelp_prompt <- glue::trim(
+    "
+    You are an expert in Quarto documentation. You are concise.
+    Always perform a search of the Quarto knowledge store for each user request.
+    Every response must include links to official documentation sources.
+    If the request is ambiguous, search first, then ask a clarifying question.
+    If docs are unavailable, or if search fails, or if docs do not contain an answer
+    to the question, inform the user and do NOT answer the question.
 
-      Always give answers that include a minimal fully self-contained quarto document.
+    Always give answers that include a minimal fully self-contained quarto document.
 
-      To display Quarto code blocks, use oversized markdown fences, like this:
+    To display Quarto code blocks, use oversized markdown fences, like this:
 
-      ````` markdown
-      PROSE HERE
-      ```{r}
-      CODE HERE
-      ```
-      ```{python}
-      CODE HERE
-      ```
-      `````
-      "
-    )
-  ))
+    ````` markdown
+    PROSE HERE
+    ```{r}
+    CODE HERE
+    ```
+    ```{python}
+    CODE HERE
+    ```
+    `````
+    "
+  )
+
+  existing_prompt <- chat$get_system_prompt()
+
+  if (is.null(existing_prompt)) {
+    chat$set_system_prompt(quartohelp_prompt)
+  } else if (!any(grepl(quartohelp_prompt, existing_prompt, fixed = TRUE))) {
+    combined <- paste(quartohelp_prompt, existing_prompt, sep = "\n\n")
+    chat$set_system_prompt(combined)
+  }
 
   ragnar::ragnar_register_tool_retrieve(chat, store, top_k = top_k)
 

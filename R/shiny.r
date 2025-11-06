@@ -246,26 +246,15 @@ quartohelp_app_server <- function(
       supplied_new_chat <- new_chat
       function() {
         out <- initial_chat
-        new_chat <<- supplied_new_chat
         initial_chat <<- NULL
+        new_chat <<- supplied_new_chat
         out
       }
     })
   }
 
   function(input, output, session) {
-    make_chat <- function() {
-      chat_obj <- new_chat()
-      if (!inherits(chat_obj, "Chat")) {
-        stop(
-          "`new_chat()` must return an object that inherits from 'Chat'.",
-          call. = FALSE
-        )
-      }
-      chat_obj
-    }
-
-    chat <- shiny::reactiveVal(make_chat())
+    chat <- shiny::reactiveVal(new_chat())
     chat_gen <- shiny::reactiveVal(1L)
     pending_question <- shiny::reactiveVal(initial_question)
 
@@ -301,7 +290,7 @@ quartohelp_app_server <- function(
       # The ragnar retrieve tool is stateful; module$clear() only resets UI history
       # and leaves the old client (with its registered tools) in place. Instead we
       # swap in a fresh client and new module id so the tool is reinitialized.
-      chat(make_chat())
+      chat(new_chat())
       pending_question(NULL)
       chat_gen(shiny::isolate(chat_gen()) + 1L)
     })
