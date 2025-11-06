@@ -5,7 +5,7 @@
 }
 
 .normalize_question <- function(question) {
-  rlang:::check_string(question, allow_null = TRUE)
+  asNamespace("rlang")$check_string(question, allow_null = TRUE)
   if (is.null(question)) {
     return(NULL)
   }
