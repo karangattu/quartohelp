@@ -23,11 +23,11 @@
 #' wire a single chat instance and an embedded documentation browser. By
 #' default a fresh chat is created with [quartohelp::chat_quartohelp()].
 #'
-#' @param question Optional character string to send as the first user turn.
+#' @param initial_question Optional character string to send as the first user turn.
 #' @param new_chat A function that returns a fresh `ellmer::Chat` instance. Used
 #'   whenever the conversation is reset. Defaults to [quartohelp::chat_quartohelp()].
-#' @param initial_chat Optional `ellmer::Chat` instance seeded into the app. When
-#'   `NULL`, the app starts with `new_chat()`.
+#' @param initial_chat Optional `ellmer::Chat` instance seeded into the app. Defaults
+#'   to `new_chat()` so a fresh chat is created when none is supplied.
 #'
 #' @return Invisibly returns the chat instance used by the app.
 #' @seealso [quartohelp::chat_quartohelp()], [quartohelp::as_quartohelp_chat()]
@@ -37,16 +37,16 @@
 #'   quartohelp::launch_app()
 #' }
 launch_app <- function(
-  question = NULL,
-  new_chat = chat_quartohelp,
-  initial_chat = NULL
+  initial_question = NULL,
+  initial_chat = new_chat(),
+  new_chat = chat_quartohelp
 ) {
   .require_api_key()
-  question <- .normalize_question(question)
 
   if (!is.function(new_chat)) {
     stop("`new_chat` must be a function that returns a 'Chat'.", call. = FALSE)
   }
+  question <- .normalize_question(initial_question)
 
   chat <- initial_chat
   if (!is.null(chat) && !inherits(chat, "Chat")) {
@@ -83,7 +83,6 @@ launch_app <- function(
 #' just the chat pane from [launch_app()] without the documentation browser or
 #' any advanced controls.
 #'
-#' @param question Optional character string to send as the first user turn.
 #' @inheritParams launch_app
 #'
 #' @return Invisibly returns the chat instance used by the app.
@@ -93,16 +92,16 @@ launch_app <- function(
 #'   quartohelp::launch_app_simple()
 #' }
 launch_app_simple <- function(
-  question = NULL,
-  new_chat = chat_quartohelp,
-  initial_chat = NULL
+  initial_question = NULL,
+  initial_chat = new_chat(),
+  new_chat = chat_quartohelp
 ) {
   .require_api_key()
-  question <- .normalize_question(question)
 
   if (!is.function(new_chat)) {
     stop("`new_chat` must be a function that returns a 'Chat'.", call. = FALSE)
   }
+  question <- .normalize_question(initial_question)
 
   chat <- initial_chat
   if (!is.null(chat) && !inherits(chat, "Chat")) {
@@ -161,6 +160,8 @@ launch_app_simple <- function(
 #' runs a single turn against the provided chat when `interactive = FALSE`.
 #'
 #' @inheritParams launch_app
+#' @param question Optional character string to send as the first user turn.
+#' @param ... Reserved for future use. Must be empty.
 #' @param interactive When `FALSE`, return the result of `chat$chat(question)`
 #'   instead of launching the app. If `question` is `NULL`, the chat object used
 #'   for the interaction is returned so you can continue the conversation manually.
@@ -178,10 +179,13 @@ launch_app_simple <- function(
 #' }
 ask <- function(
   question = NULL,
+  ...,
   initial_chat = NULL,
   new_chat = chat_quartohelp,
   interactive = TRUE
 ) {
+  rlang::check_dots_empty()
+
   if (!interactive) {
     .require_api_key()
     if (!is.function(new_chat)) {
@@ -207,7 +211,7 @@ ask <- function(
   }
 
   launch_app(
-    question = question,
+    initial_question = question,
     initial_chat = initial_chat,
     new_chat = new_chat
   )
