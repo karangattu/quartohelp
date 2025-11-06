@@ -6,6 +6,7 @@
 \usage{
 ask(
   question = NULL,
+  ...,
   initial_chat = NULL,
   new_chat = chat_quartohelp,
   interactive = TRUE
@@ -14,8 +15,10 @@ ask(
 \arguments{
 \item{question}{Optional character string to send as the first user turn.}
 
-\item{initial_chat}{Optional \code{ellmer::Chat} instance seeded into the app. When
-\code{NULL}, the app starts with \code{new_chat()}.}
+\item{...}{Reserved for future use. Must be empty.}
+
+\item{initial_chat}{Optional \code{ellmer::Chat} instance seeded into the app. Defaults
+to \code{new_chat()} so a fresh chat is created when none is supplied.}
 
 \item{new_chat}{A function that returns a fresh \code{ellmer::Chat} instance. Used
 whenever the conversation is reset. Defaults to \code{\link[=chat_quartohelp]{chat_quartohelp()}}.}
