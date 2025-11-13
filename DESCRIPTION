@@ -21,6 +21,7 @@ Imports:
     fs,
     promises,
     ragnar (>= 0.2.0),
+    Rapp (>= 0.2.0.9000),
     rlang (>= 1.1.0),
     shiny,
     shinychat (>= 0.2.0.9000),
@@ -29,7 +30,8 @@ Imports:
 Remotes:
     posit-dev/shinychat/pkg-r,
     tidyverse/ellmer,
-    tidyverse/ragnar
+    tidyverse/ragnar,
+    r-lib/Rapp
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

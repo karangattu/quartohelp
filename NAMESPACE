@@ -2,6 +2,7 @@
 
 export(ask)
 export(chat_quartohelp)
+export(install_quartohelp_cli)
 export(launch_app)
 export(launch_app_simple)
 export(serve_store)

@@ -216,3 +216,29 @@ ask <- function(
     new_chat = new_chat
   )
 }
+
+
+#' Install the `quartohelp` cli launcher
+#'
+#' @inheritDotParams Rapp::install_pkg_cli_apps -package -lib.loc
+#'
+#' @details
+#'
+#' From R, run:
+#'
+#' ```r
+#'   quartohelp::install_quartohelp_cli()
+#' ```
+#'
+#' Then, from terminal, call quartohelp
+#'
+#' ```bash
+#'   quartohelp
+#'   quartohelp --help
+#'   quartohelp 'how to make a two-column layout?'
+#' ```
+#'
+#' @export
+install_quartohelp_cli <- function(...) {
+  Rapp::install_pkg_cli_apps("quartohelp", lib.loc = NULL, ...)
+}
