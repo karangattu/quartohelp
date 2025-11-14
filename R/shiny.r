@@ -19,6 +19,26 @@
   }
 })
 
+chat_panel_id <- function(index) {
+  paste0("chat_panel_", index)
+}
+
+chat_panel_container_id <- function(module_id) {
+  paste0(module_id, "_container")
+}
+
+chat_panel_ui <- function(module_id) {
+  shiny::div(
+    id = chat_panel_container_id(module_id),
+    class = "h-100 d-flex flex-column",
+    shinychat::chat_mod_ui(
+      module_id,
+      height = "100%",
+      fill = TRUE
+    )
+  )
+}
+
 #' Internal UI for the Quarto Help app
 #' @noRd
 quartohelp_app_ui <- function() {
@@ -112,7 +132,7 @@ quartohelp_app_ui <- function() {
                 },
                 shiny::div(
                   id = "chat-pane",
-                  shiny::uiOutput("chat_panel")
+                  chat_panel_ui(chat_panel_id(1L))
                 )
               )
             )
@@ -257,19 +277,36 @@ quartohelp_app_server <- function(
     chat <- shiny::reactiveVal(new_chat())
     chat_gen <- shiny::reactiveVal(1L)
     pending_question <- shiny::reactiveVal(initial_question)
+    active_module_id <- shiny::reactiveVal(chat_panel_id(1L))
 
-    output$chat_panel <- shiny::renderUI({
-      shinychat::chat_mod_ui(
-        paste0("chat_panel_", chat_gen()),
-        height = "100%",
-        fill = TRUE
+    swap_chat_ui <- function(module_id) {
+      shiny::insertUI(
+        selector = "#chat-pane",
+        where = "beforeEnd",
+        ui = chat_panel_ui(module_id),
+        session = session,
+        immediate = TRUE
       )
-    })
+
+      previous_id <- shiny::isolate(active_module_id())
+      if (!is.null(previous_id) && !identical(previous_id, module_id)) {
+        shiny::removeUI(
+          selector = paste0("#", chat_panel_container_id(previous_id)),
+          session = session,
+          immediate = TRUE
+        )
+      }
+
+      active_module_id(module_id)
+    }
 
     shiny::observeEvent(
       chat_gen(),
       {
-        module_id <- paste0("chat_panel_", chat_gen())
+        module_id <- chat_panel_id(chat_gen())
+        if (chat_gen() > 1L) {
+          swap_chat_ui(module_id)
+        }
         module <- shinychat::chat_mod_server(module_id, chat())
 
         question <- pending_question()
