@@ -24,18 +24,19 @@ as_quartohelp_chat <- function(
   if (inherits(proto, "Chat")) {
     chat <- proto
   } else if (is.null(proto)) {
-    chat <- ellmer::chat_openai_compatible(
-      base_url = "https://api.openai.com/v1",
+    chat <- ellmer::chat_openai(
+      # chat <- ellmer::chat_openai_compatible(
+      # base_url = "https://api.openai.com/v1",
       model = "gpt-5.1",
-      api_args = list(list(
-        reasoning = list(effort = "low"),
-        # reasoning = list(effort = "minimal"),
-        verbosity = "low"
-      )),
-      # params = ellmer::params(
-      #   text = list(verbosity = "low"),
-      #   reasoning_effort = "low"
-      # ),
+      # api_args = list(list(
+      #   # reasoning = list(effort = "low"),
+      #   # reasoning = list(effort = "minimal"),
+      #   verbosity = "low"
+      # )),
+      params = ellmer::params(
+        #   reasoning_effort = "low" # gpt-5.1 default reasining effort is 'none'
+        text = list(verbosity = "low")
+      ),
       echo = "none"
     )
   } else if (is.function(proto)) {
