@@ -2,7 +2,7 @@
 #'
 #' Attaches the Quarto knowledge store retrieval tool and system prompt to a
 #' chat instance. By default this creates a fresh OpenAI chat via
-#' [ellmer::chat_openai_responses()] and registers
+#' [ellmer::chat_openai_compatible()] and registers
 #' [ragnar::ragnar_register_tool_retrieve] so that every response can cite
 #' relevant Quarto documentation.
 #'
@@ -24,10 +24,12 @@ as_quartohelp_chat <- function(
   if (inherits(proto, "Chat")) {
     chat <- proto
   } else if (is.null(proto)) {
-    chat <- ellmer::chat_openai(
-      model = "gpt-5",
+    chat <- ellmer::chat_openai_compatible(
+      base_url = "https://api.openai.com/v1",
+      model = "gpt-5.1",
       api_args = list(list(
         reasoning = list(effort = "low"),
+        # reasoning = list(effort = "minimal"),
         verbosity = "low"
       )),
       # params = ellmer::params(
@@ -60,6 +62,7 @@ as_quartohelp_chat <- function(
     If the request is ambiguous, search first, then ask a clarifying question.
     If docs are unavailable, or if search fails, or if docs do not contain an answer
     to the question, inform the user and do NOT answer the question.
+    Avoid calling the search tool more than once per user turn.
 
     Always give answers that include a minimal fully self-contained quarto document.
 

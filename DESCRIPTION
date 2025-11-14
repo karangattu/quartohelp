@@ -17,7 +17,7 @@ Imports:
     DBI,
     dotty,
     dplyr,
-    ellmer (>= 0.2.1.9000),
+    ellmer (>= 0.3.2.9000),
     fs,
     promises,
     ragnar (>= 0.2.0),
