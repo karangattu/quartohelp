@@ -2,7 +2,7 @@
 #'
 #' Attaches the Quarto knowledge store retrieval tool and system prompt to a
 #' chat instance. By default this creates a fresh OpenAI chat via
-#' [ellmer::chat_openai_compatible()] and registers
+#' [ellmer::chat_openai()] and registers
 #' [ragnar::ragnar_register_tool_retrieve] so that every response can cite
 #' relevant Quarto documentation.
 #'
@@ -25,16 +25,10 @@ as_quartohelp_chat <- function(
     chat <- proto
   } else if (is.null(proto)) {
     chat <- ellmer::chat_openai(
-      # chat <- ellmer::chat_openai_compatible(
-      # base_url = "https://api.openai.com/v1",
       model = "gpt-5.1",
-      # api_args = list(list(
-      #   # reasoning = list(effort = "low"),
-      #   # reasoning = list(effort = "minimal"),
-      #   verbosity = "low"
-      # )),
       params = ellmer::params(
-        #   reasoning_effort = "low" # gpt-5.1 default reasining effort is 'none'
+        # # gpt-5.1 default reasoning effort is 'none'
+        # reasoning_effort = "low"
         text = list(verbosity = "low")
       ),
       echo = "none"

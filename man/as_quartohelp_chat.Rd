@@ -28,7 +28,7 @@ The configured \code{chat} object.
 \description{
 Attaches the Quarto knowledge store retrieval tool and system prompt to a
 chat instance. By default this creates a fresh OpenAI chat via
-\code{\link[ellmer:chat_openai_compatible]{ellmer::chat_openai_compatible()}} and registers
+\code{\link[ellmer:chat_openai]{ellmer::chat_openai()}} and registers
 \link[ragnar:ragnar_register_tool_retrieve]{ragnar::ragnar_register_tool_retrieve} so that every response can cite
 relevant Quarto documentation.
 }
