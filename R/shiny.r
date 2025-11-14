@@ -126,7 +126,27 @@ quartohelp_app_ui <- function() {
                       `aria-label` = "Close"
                     ),
                     shiny::p(
-                      "All interactions in this app are recorded for analysis and improvement. Please do not include any personal, sensitive, or confidential information."
+                      class = "mb-1 small text-muted",
+                      shiny::tags$strong("© 2025 Posit Software, PBC."),
+                      " Quarto Help activity may be reviewed to monitor abuse and improve the service. Please avoid sharing personal, sensitive, or confidential information."
+                    ),
+                    shiny::p(
+                      class = "m-0 small text-muted",
+                      "By using this app you agree to Posit's ",
+                      shiny::tags$a(
+                        href = "https://posit.co/about/posit-service-terms-of-use/",
+                        target = "_blank",
+                        style = "color: #888; text-decoration: none;",
+                        "Terms & Conditions"
+                      ),
+                      " and ",
+                      shiny::tags$a(
+                        href = "https://posit.co/about/privacy-policy/",
+                        target = "_blank",
+                        style = "color: #888; text-decoration: none;",
+                        "Privacy Policy"
+                      ),
+                      "."
                     )
                   )
                 },
