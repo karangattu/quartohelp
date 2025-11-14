@@ -10,6 +10,7 @@ library("methods")
 library("shiny")
 
 #| description: Optional string to send as the first user turn.
+#| required: false
 question <- NULL
 
 quartohelp::ask(question)
