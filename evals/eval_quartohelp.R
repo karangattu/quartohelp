@@ -19,7 +19,7 @@ vitals::vitals_log_dir_set("./logs")
 
 tsk <- Task$new(
   dataset = quarto_evaluation_suite,
-  solver = generate(solver_chat = chat_quartohelp()),
+  solver = generate(solver_chat = chat_quartohelp),
   scorer = model_graded_qa(
     scorer_chat = chat_openai(model = "gpt-5-nano-2025-08-07"),
     partial_credit = TRUE

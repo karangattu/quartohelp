@@ -8,7 +8,7 @@ input,target
 "What's the syntax for cross-referencing figures in Quarto?","Should search knowledge store, provide .qmd example with #fig-label and @fig-label syntax, link to cross-references documentation"
 "How do I create and reference tables in Quarto?","Should search knowledge store, provide .qmd example with #tbl-label and @tbl-label syntax, link to tables and cross-references docs"
 "How do I add Shiny interactivity to a Quarto document?","Should search knowledge store, provide .qmd example with server: shiny in YAML, link to Shiny documentation"
-"What's a callout block?","Should search knowledge store, provide .qmd example with :::{.callout-note} syntax, link to callouts documentation"
+"What's a callout block?","Should search knowledge store, provide .qmd example with :::{.callout-*} syntax, link to callouts documentation"
 "What are Quarto extensions and how do I install them?","Should search knowledge store, provide quarto add command example, may include .qmd using extension, link to extensions documentation"
 "What's the command to render a Quarto document?","Should search knowledge store, provide quarto render command example, may include basic .qmd file, link to CLI documentation"
 "How do I fix this error: 'pandoc: command not found'?","Should search knowledge store for installation/troubleshooting docs, if not found inform user docs don't contain this specific error solution, may suggest checking installation, link to installation docs if available"
