@@ -29,16 +29,9 @@ jobs:
             - uses: r-lib/actions/setup-r-dependencies@v2
               with:
                   extra-packages: |
+                      local::.
                       tidyverse/vitals
-                      any::ellmer
-                      any::readr
-                      any::ragnar
-                      any::rsconnect
                   needs: check
-
-            - name: Install quartohelp package
-              run: |
-                  R CMD INSTALL .
 
             - name: Download ragnar store
               env:
