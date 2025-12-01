@@ -36,11 +36,15 @@ jobs:
                       any::rsconnect
                   needs: check
 
+            - name: Install quartohelp package
+              run: |
+                  R CMD INSTALL .
+
             - name: Download ragnar store
               env:
                   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
               run: |
-                  Rscript -e 'source("R/store.r"); update_store()'
+                  Rscript -e 'quartohelp::update_store()'
 
             - name: Run Evaluation
               env:
